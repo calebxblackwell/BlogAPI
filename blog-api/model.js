@@ -1,58 +1,31 @@
-const uuid = require('uuid');
-function StorageException(message) {
-   this.message = message;
-   this.name = "StorageException";
-}
+const mongoose = require('mongoose');
+mongoose.Promise = global.Promise;
 
-const BlogPosts = {
-  create: function(title, content, author, publishDate) {
-    const post = {
-      id: uuid.v4(),
-      title: title,
-      content: content,
-      author: author,
-      publishDate: publishDate || Date.now()
-    };
-    this.posts.push(post);
-    return post;
+const blogPostSchema = mongoose.Schema({
+  author: {
+    firstName: String,
+    lastName: String
   },
-  get: function(id=null) {
-    // if id passed in, get post,
-    // otherwise send all posts.
-    if (id !== null) {
-      return this.posts.find(post => post.id === id);
-    }
-    // return posts sorted
-    return this.posts.sort(function(a, b) {
-      return b.publishDate - a.publishDate
-    });
-  },
-  delete: function(id) {
-    const postIndex = this.posts.findIndex(
-      post => post.id === id);
-    if (postIndex > -1) {
-      this.posts.splice(postIndex, 1);
-    }
-  },
-  update: function(updatedPost) {
-    const {id} = updatedPost;
-    const postIndex = this.posts.findIndex(
-      post => post.id === updatedPost.id);
-    if (postIndex === -1) {
-      throw StorageException(
-        `This item \`${id}\` doesn't exist.`)
-    }
-    this.posts[postIndex] = Object.assign(
-      this.posts[postIndex], updatedPost);
-    return this.posts[postIndex];
-  }
+  title: {type: String, required: true},
+  content: {type: String},
+  created: {type: Date, default: Date.now}
+});
+
+
+blogPostSchema.virtual('authorName').get(function() {
+  return `${this.author.firstName} ${this.author.lastName}`.trim();
+});
+
+blogPostSchema.methods.serialize = function() {
+  return {
+    id: this._id,
+    author: this.authorName,
+    content: this.content,
+    title: this.title,
+    created: this.created
+  };
 };
 
-function createBlogPostsModel() {
-  const storage = Object.create(BlogPosts);
-  storage.posts = [];
-  return storage;
-}
+const BlogPost = mongoose.model('BlogPost', blogPostSchema);
 
-
-module.exports = {BlogPosts: createBlogPostsModel()};
+module.exports = {BlogPost};
